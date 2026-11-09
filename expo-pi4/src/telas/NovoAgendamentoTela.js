@@ -1,13 +1,13 @@
 // Novo agendamento (Sérgio): cliente da carteira, visita ou reunião, data e hora.
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Platform, ScrollView, Text, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Botao, Campo, Chip, Erro, s } from "../componentes/ui";
 import { criarAgendamento, listarClientes, listarEmpreendimentos } from "../api/servicos";
-import { dia, hora } from "../lib/datas";
+import { combinarDataHora, dataFutura, dia, hora } from "../lib/datas";
 import { cores } from "../tema";
 
-const sem = (t = "") => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const sem = (t = "") => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export default function NovoAgendamentoTela({ navigation }) {
   const [clientes, setClientes] = useState([]);
@@ -23,19 +23,34 @@ export default function NovoAgendamentoTela({ navigation }) {
   const [obs, setObs] = useState("");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [carregandoClientes, setCarregandoClientes] = useState(true);
+  const [carregandoEmp, setCarregandoEmp] = useState(true);
+  const [erroClientes, setErroClientes] = useState("");
+  const [erroEmp, setErroEmp] = useState("");
 
   useEffect(() => {
-    listarClientes().then(setClientes).catch((e) => setErro(e.message));
-    listarEmpreendimentos().then((d) => setEmpreendimentos(Array.isArray(d) ? d : [])).catch(() => {});
+    let ativo = true;
+    listarClientes()
+      .then((dados) => { if (ativo) setClientes(Array.isArray(dados) ? dados : []); })
+      .catch((e) => { if (ativo) setErroClientes(e?.message ?? "Não foi possível carregar clientes."); })
+      .finally(() => { if (ativo) setCarregandoClientes(false); });
+    listarEmpreendimentos()
+      .then((dados) => {
+        if (ativo) setEmpreendimentos(Array.isArray(dados) ? dados : Array.isArray(dados?.empreendimentos) ? dados.empreendimentos : []);
+      })
+      .catch((e) => { if (ativo) setErroEmp(e?.message ?? "Não foi possível carregar empreendimentos."); })
+      .finally(() => { if (ativo) setCarregandoEmp(false); });
+    return () => { ativo = false; };
   }, []);
 
   const clientesFiltrados = useMemo(() => clientes.filter((c) => !buscaCliente || sem(c.nome).includes(sem(buscaCliente))).slice(0, 6), [clientes, buscaCliente]);
   const empsFiltrados = useMemo(() => empreendimentos.filter((e) => !buscaEmp || sem(`${e.nome} ${e.bairro ?? ""}`).includes(sem(buscaEmp))).slice(0, 6), [empreendimentos, buscaEmp]);
 
   async function salvar() {
+    if (salvando) return;
     if (!cliente) return setErro("Escolha o cliente. Lead novo vira cliente pelo site em Meus leads → Agendar visita.");
     if (tipo === "visita_imovel" && !emp) return setErro("Escolha o empreendimento da visita.");
-    if (quando <= new Date()) return setErro("Escolha um horário daqui pra frente.");
+    if (!dataFutura(quando)) return setErro("Escolha uma data e hora futuras.");
     setSalvando(true);
     setErro("");
     try {
@@ -55,7 +70,7 @@ export default function NovoAgendamentoTela({ navigation }) {
 
   return (
     <ScrollView style={s.tela} contentContainerStyle={s.conteudo} keyboardShouldPersistTaps="handled">
-      <View style={s.linha}>
+      <View style={[s.linha, { flexWrap: "wrap" }]}>
         <Chip texto="Visita ao imóvel" ativo={tipo === "visita_imovel"} onPress={() => setTipo("visita_imovel")} />
         <Chip texto="Reunião no escritório" ativo={tipo === "reuniao_escritorio"} onPress={() => setTipo("reuniao_escritorio")} />
       </View>
@@ -64,8 +79,11 @@ export default function NovoAgendamentoTela({ navigation }) {
       {cliente ? <Botao tipo="contorno" titulo={`${cliente.nome} (trocar)`} onPress={() => setCliente(null)} /> : (
         <>
           <Campo value={buscaCliente} onChangeText={setBuscaCliente} placeholder="Buscar na sua carteira" />
-          {clientesFiltrados.map((c) => <Botao key={c.id} tipo="contorno" titulo={c.nome} onPress={() => setCliente(c)} />)}
-          {clientes.length === 0 && <Text style={s.texto3}>Sua carteira está vazia.</Text>}
+          {carregandoClientes && <ActivityIndicator color={cores.dourado} />}
+          <Erro texto={erroClientes} />
+          {!carregandoClientes && !erroClientes && clientesFiltrados.map((c) => <Botao key={c.id} tipo="contorno" titulo={c.nome} onPress={() => setCliente(c)} />)}
+          {!carregandoClientes && !erroClientes && clientes.length === 0 && <Text style={s.texto3}>Sua carteira está vazia.</Text>}
+          {!carregandoClientes && !erroClientes && clientes.length > 0 && clientesFiltrados.length === 0 && <Text style={s.texto3}>Nenhum cliente encontrado.</Text>}
         </>
       )}
 
@@ -75,7 +93,11 @@ export default function NovoAgendamentoTela({ navigation }) {
           {emp ? <Botao tipo="contorno" titulo={`${emp.nome} (trocar)`} onPress={() => setEmp(null)} /> : (
             <>
               <Campo value={buscaEmp} onChangeText={setBuscaEmp} placeholder="Buscar empreendimento" />
-              {empsFiltrados.map((e) => <Botao key={e.id} tipo="contorno" titulo={e.nome} onPress={() => setEmp(e)} />)}
+              {carregandoEmp && <ActivityIndicator color={cores.dourado} />}
+              <Erro texto={erroEmp} />
+              {!carregandoEmp && !erroEmp && empsFiltrados.map((e) => <Botao key={e.id} tipo="contorno" titulo={e.nome} onPress={() => setEmp(e)} />)}
+              {!carregandoEmp && !erroEmp && empreendimentos.length === 0 && <Text style={s.texto3}>Nenhum empreendimento disponível.</Text>}
+              {!carregandoEmp && !erroEmp && empreendimentos.length > 0 && empsFiltrados.length === 0 && <Text style={s.texto3}>Nenhum empreendimento encontrado.</Text>
             </>
           )}
         </>
@@ -89,13 +111,26 @@ export default function NovoAgendamentoTela({ navigation }) {
         <Botao tipo="contorno" icone="time-outline" titulo={hora(quando)} onPress={() => setModo("time")} estilo={{ flex: 1 }} />
       </View>
       {modo && (
-        <DateTimePicker value={quando} mode={modo} is24Hour minimumDate={new Date()}
-          onChange={(ev, d) => { setModo(null); if (d) setQuando((a) => { const n = new Date(a); if (modo === "date") n.setFullYear(d.getFullYear(), d.getMonth(), d.getDate()); else n.setHours(d.getHours(), d.getMinutes(), 0, 0); return n; }); }} />
+        <View style={{ gap: 8 }}>
+          <DateTimePicker
+            key={modo}
+            value={quando}
+            mode={modo}
+            is24Hour
+            minimumDate={modo === "date" ? new Date() : undefined}
+            onChange={(evento, escolhido) => {
+              if (Platform.OS !== "ios") setModo(null);
+              if (evento.type !== "dismissed" && escolhido) setQuando((atual) => combinarDataHora(atual, escolhido, modo));
+            }}
+          />
+          {Platform.OS === "ios" && <Botao tipo="contorno" titulo="Concluir seleção" onPress={() => setModo(null)} />}
+        </View>
       )}
+      {!dataFutura(quando) && <Erro texto="Escolha uma data e hora futuras." />}
 
       <Campo rotulo="Observações (opcional)" value={obs} onChangeText={setObs} multiline placeholder="Ex.: levar simulação de crédito" />
       <Erro texto={erro} />
-      <Botao titulo="Agendar" icone="checkmark" onPress={salvar} carregando={salvando} />
+      <Botao titulo="Agendar" icone="checkmark" onPress={salvar} desativado={salvando || !dataFutura(quando)} carregando={salvando} />
       <Text style={[s.texto3, { color: cores.texto3 }]}>O cliente aparece na agenda do site também.</Text>
     </ScrollView>
   );
