@@ -8,6 +8,7 @@ import { Botao, Campo, Carregando, Cartao, Chip, Erro, Selo, Vazio, s } from "..
 import { meusLeads, minhaRoleta, mudarStatusLead, registrarAtividade } from "../api/servicos";
 import { formatarTelefone, linkLigar, linkWhatsApp, saudacao } from "../lib/telefone";
 import { dia, hora, tempoDesde } from "../lib/datas";
+import { assuntoDoContato, detalheDoPedido, tipoDoLead } from "../lib/leads";
 import { agendarLembrete } from "../notificacoes/push";
 import { cores } from "../tema";
 
@@ -17,6 +18,12 @@ const STATUS = {
   convertido: { rotulo: "Convertido", cor: cores.ok },
   perdido: { rotulo: "Perdido", cor: cores.perigo },
 };
+// Leads de captação e de busca por pronto/usado vêm do site sem empreendimento.
+const TIPOS = {
+  captacao: { rotulo: "Captação", cor: cores.ok, titulo: "Quer vender o imóvel", dica: "Ligue e combine a avaliação do imóvel." },
+  pronto_usado: { rotulo: "Pronto ou usado", cor: cores.dourado, titulo: "Procura pronto ou usado", dica: "Busque nos parceiros e volte com opções." },
+};
+
 const FILTROS = [["ativos", "Ativos"], ["novo", "Novos"], ["em_atendimento", "Em atendimento"], ["convertido", "Convertidos"], ["perdido", "Perdidos"]];
 
 function Lembrete({ lead, onFechar }) {
@@ -69,13 +76,15 @@ function CartaoLead({ lead, onAtualizar }) {
   const [lembrete, setLembrete] = useState(false);
   const st = STATUS[lead.status] ?? STATUS.novo;
   const chegou = lead.atribuidoEm ?? lead.criadoEm;
+  const tipo = TIPOS[tipoDoLead(lead.mensagem)] ?? null;
+  const detalhe = tipo ? detalheDoPedido(lead.mensagem) : "";
 
   async function contato(tipo) {
     // Registra o contato e tira o lead de "novo" (o gerente vê o tempo de resposta).
     registrarAtividade(lead.id, { tipo, descricao: tipo === "ligacao" ? "Ligou para o cliente pelo app." : "Abriu a conversa no WhatsApp pelo app." }).catch(() => {});
     if (lead.status === "novo") mudarStatusLead(lead.id, "em_atendimento").then(onAtualizar).catch(() => {});
     const primeiro = lead.nome.split(" ")[0];
-    await Linking.openURL(tipo === "ligacao" ? linkLigar(lead.telefone) : linkWhatsApp(lead.telefone, `${saudacao()}, ${primeiro}! Aqui é da Place Brokers, sobre o seu interesse${lead.empreendimento?.nome ? ` no ${lead.empreendimento.nome}` : ""}.`));
+    await Linking.openURL(tipo === "ligacao" ? linkLigar(lead.telefone) : linkWhatsApp(lead.telefone, `${saudacao()}, ${primeiro}! Aqui é da Place Brokers, ${assuntoDoContato(lead)}.`));
   }
 
   async function copiar() {
@@ -96,12 +105,19 @@ function CartaoLead({ lead, onAtualizar }) {
       <View style={[s.linha, { justifyContent: "space-between" }]}>
         <View style={{ flex: 1 }}>
           <Text style={[s.texto, { fontWeight: "700" }]} numberOfLines={1}>{lead.nome}</Text>
-          <Text style={s.texto3} numberOfLines={1}>{lead.empreendimento?.nome ?? "Sem empreendimento"} · {dia(chegou)}</Text>
+          <Text style={s.texto3} numberOfLines={1}>{lead.empreendimento?.nome ?? tipo?.titulo ?? "Sem empreendimento"} · {dia(chegou)}</Text>
         </View>
         <Pressable onPress={mudarStatus} accessibilityRole="button" accessibilityLabel={`Status: ${st.rotulo}. Tocar para mudar`} hitSlop={10}>
           <Selo texto={st.rotulo} cor={st.cor} />
         </Pressable>
       </View>
+      {tipo && (
+        <View style={{ gap: 4, borderLeftWidth: 3, borderLeftColor: tipo.cor, paddingLeft: 10 }}>
+          <Selo texto={tipo.rotulo} cor={tipo.cor} />
+          {detalhe ? <Text style={s.texto2}>{detalhe}</Text> : null}
+          <Text style={s.texto3}>{tipo.dica}</Text>
+        </View>
+      )}
       {lead.status === "novo" && <Text style={{ color: cores.perigo, fontWeight: "600" }}>Aguardando retorno {tempoDesde(chegou)}</Text>}
       <Pressable onLongPress={copiar} delayLongPress={350} accessibilityHint="Segure para copiar o número"
         style={{ backgroundColor: cores.cartao2, borderRadius: 12, padding: 12 }}>
