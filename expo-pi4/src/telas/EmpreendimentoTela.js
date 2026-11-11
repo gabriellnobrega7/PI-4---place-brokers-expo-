@@ -1,6 +1,6 @@
 // Detalhe do empreendimento (Gabriel): fotos, valores, book/tabela e envio ao cliente.
-import { useEffect, useMemo, useState } from "react";
-import { Dimensions, FlatList, Image, Linking, ScrollView, Share, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Dimensions, FlatList, Image, Linking, ScrollView, Share, Text, View } from "react-native";
 import { Botao, Cartao, Erro, Selo, s } from "../componentes/ui";
 import { buscarEmpreendimento, listarDocumentos, urlDoDocumento } from "../api/servicos";
 import { FASES, SEGMENTOS, faixa, mensagemDoEmpreendimento, prazoDoEmpreendimento, precoDoEmpreendimento } from "../lib/preco";
@@ -12,15 +12,33 @@ const LARGURA = Dimensions.get("window").width;
 export default function EmpreendimentoTela({ route, navigation }) {
   const { id, resumo } = route.params;
   const [emp, setEmp] = useState(resumo ?? { id });
-  const [docs, setDocs] = useState([]);
+  const [docs, setDocs] = useState(null);
+  const [erroDocs, setErroDocs] = useState("");
+  const [carregandoDocs, setCarregandoDocs] = useState(true);
   const [erro, setErro] = useState("");
   const [abrindo, setAbrindo] = useState(null);
 
+  const carregarDocumentos = useCallback(async () => {
+    setCarregandoDocs(true);
+    setErroDocs("");
+    try {
+      const dados = await listarDocumentos(id);
+      setDocs(Array.isArray(dados) ? dados : []);
+    } catch (e) {
+      // Não confunda falha de comunicação com ausência de documentos.
+      setErroDocs(e.message || "Não foi possível carregar os documentos.");
+    } finally {
+      setCarregandoDocs(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     navigation.setOptions({ title: resumo?.nome ?? "Empreendimento" });
+    setDocs(null);
+    setErro("");
     buscarEmpreendimento(id).then((d) => setEmp((a) => ({ ...a, ...d }))).catch((e) => setErro(e.message));
-    listarDocumentos(id).then((d) => setDocs(Array.isArray(d) ? d : [])).catch(() => setDocs([]));
-  }, [id]);
+    carregarDocumentos();
+  }, [id, navigation, resumo?.nome, carregarDocumentos]);
 
   const fotos = useMemo(() => {
     const galeria = [...(emp.imagens ?? [])].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)).map((i) => i.url);
@@ -80,12 +98,20 @@ export default function EmpreendimentoTela({ route, navigation }) {
         {emp.descricao ? <Text style={[s.texto2, { lineHeight: 21 }]}>{emp.descricao}</Text> : null}
 
         <Text style={[s.rotulo, { marginTop: 8 }]}>Material comercial (só para a equipe)</Text>
-        {docs.length === 0 ? <Text style={s.texto3}>Ainda não há book nem tabela aprovados.</Text>
-          : docs.map((d) => (
+        {carregandoDocs && docs === null ? (
+          <View style={[s.linha, { justifyContent: "center", padding: 12 }]}>
+            <ActivityIndicator color={cores.dourado} />
+            <Text style={s.texto3}>Carregando documentos...</Text>
+          </View>
+        ) : null}
+        <Erro texto={erroDocs} />
+        {erroDocs ? <Botao tipo="contorno" titulo="Tentar carregar documentos novamente" carregando={carregandoDocs} onPress={carregarDocumentos} /> : null}
+        {!carregandoDocs && !erroDocs && docs?.length === 0 ? <Text style={s.texto3}>Ainda não há book nem tabela aprovados.</Text> : null}
+        {docs?.length > 0 ? docs.map((d) => (
             <Botao key={d.id ?? d.tipo} tipo="contorno" icone={d.tipo === "book" ? "book-outline" : "pricetag-outline"}
               titulo={`${d.tipo === "book" ? "Abrir book" : "Abrir tabela"}${d.fase ? ` — ${d.fase}` : ""}`}
               carregando={abrindo === (d.id ?? d.tipo)} onPress={() => abrirDoc(d)} />
-          ))}
+          )) : null}
 
         {emp.publicado !== false && emp.disponivel !== false && (
           <>
