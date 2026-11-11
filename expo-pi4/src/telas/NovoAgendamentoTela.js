@@ -97,7 +97,7 @@ export default function NovoAgendamentoTela({ navigation }) {
               <Erro texto={erroEmp} />
               {!carregandoEmp && !erroEmp && empsFiltrados.map((e) => <Botao key={e.id} tipo="contorno" titulo={e.nome} onPress={() => setEmp(e)} />)}
               {!carregandoEmp && !erroEmp && empreendimentos.length === 0 && <Text style={s.texto3}>Nenhum empreendimento disponível.</Text>}
-              {!carregandoEmp && !erroEmp && empreendimentos.length > 0 && empsFiltrados.length === 0 && <Text style={s.texto3}>Nenhum empreendimento encontrado.</Text>
+              {!carregandoEmp && !erroEmp && empreendimentos.length > 0 && empsFiltrados.length === 0 && <Text style={s.texto3}>Nenhum empreendimento encontrado.</Text>}
             </>
           )}
         </>
