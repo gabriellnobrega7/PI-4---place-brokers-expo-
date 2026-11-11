@@ -1,11 +1,15 @@
 // Login (Gabriel). Mesmo login do site; "Esqueci minha senha" manda o link por e-mail.
+// "Cadastre-se" abre o cadastro do site no navegador: a conta fica pendente até o administrador aprovar.
 import { useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Botao, Campo, Erro, s } from "../componentes/ui";
 import { useSessao } from "../contexto";
 import { esqueciSenha } from "../api/servicos";
-import { cores } from "../tema";
+import { SITE_URL } from "../config";
+import { ALVO, cores } from "../tema";
+
+const CADASTRO_URL = `${SITE_URL}/register`;
 
 export default function LoginTela() {
   const { login } = useSessao();
@@ -40,6 +44,11 @@ export default function LoginTela() {
     }
   }
 
+  async function cadastrar() {
+    try { await Linking.openURL(CADASTRO_URL); }
+    catch { Alert.alert("Não deu para abrir", `Acesse ${CADASTRO_URL} no navegador.`); }
+  }
+
   return (
     <SafeAreaView style={s.tela}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
@@ -55,6 +64,18 @@ export default function LoginTela() {
           {aviso ? <Text style={[s.texto2, { color: cores.ok }]}>{aviso}</Text> : null}
           <Botao titulo="Entrar" onPress={entrar} carregando={entrando} />
           <Botao titulo="Esqueci minha senha" tipo="contorno" onPress={esqueci} />
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Cadastre-se"
+            accessibilityHint="Abre o cadastro no site"
+            onPress={cadastrar}
+            style={({ pressed }) => ({ minHeight: ALVO, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.7 : 1 })}
+          >
+            <Text style={s.texto2}>
+              Ainda não tem conta? <Text style={{ color: cores.dourado, fontWeight: "700" }}>Cadastre-se</Text>
+            </Text>
+          </Pressable>
+          <Text style={[s.texto3, { textAlign: "center" }]}>O cadastro é feito no site e fica pendente até o administrador aprovar.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
