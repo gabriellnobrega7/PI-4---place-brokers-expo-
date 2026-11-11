@@ -1,7 +1,7 @@
 // Catálogo de empreendimentos (Gabriel): busca, segmento e "só disponíveis".
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import { Carregando, Chip, Erro, Selo, Vazio, s } from "../componentes/ui";
+import { Botao, Carregando, Chip, Erro, Selo, Vazio, s } from "../componentes/ui";
 import { listarEmpreendimentos } from "../api/servicos";
 import { FASES, SEGMENTOS, faixa, prazoDoEmpreendimento, precoDoEmpreendimento } from "../lib/preco";
 import { cores, raio } from "../tema";
@@ -49,12 +49,22 @@ export default function CatalogoTela({ navigation }) {
       const dados = await listarEmpreendimentos();
       setLista(Array.isArray(dados) ? dados : dados?.empreendimentos ?? []);
     } catch (e) {
-      setErro(e.message);
-      setLista((l) => l ?? []);
+      // Não transforme uma falha da API em um catálogo vazio.
+      // Se já havia dados carregados, mantenha-os visíveis.
+      setErro(e.message || "Não foi possível carregar os empreendimentos.");
     }
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  async function atualizar() {
+    setAtualizando(true);
+    try {
+      await carregar();
+    } finally {
+      setAtualizando(false);
+    }
+  }
 
   const filtrados = useMemo(() => {
     const q = sem(busca.trim());
@@ -64,6 +74,16 @@ export default function CatalogoTela({ navigation }) {
       .filter((e) => !q || sem(`${e.nome} ${e.bairro ?? ""} ${e.cidade ?? ""}`).includes(q));
   }, [lista, busca, segmento, soDisponiveis]);
 
+  if (lista === null && erro) {
+    return (
+      <View style={[s.tela, s.vazio, { padding: 24 }]}>
+        <Erro texto={erro} />
+        <Text style={[s.texto2, { textAlign: "center" }]}>Não foi possível consultar o catálogo. Verifique sua conexão e tente novamente.</Text>
+        <Botao titulo="Tentar novamente" tipo="contorno" onPress={carregar} />
+      </View>
+    );
+  }
+
   if (lista === null) return <Carregando />;
 
   return (
@@ -72,7 +92,7 @@ export default function CatalogoTela({ navigation }) {
       contentContainerStyle={s.conteudo}
       data={filtrados}
       keyExtractor={(e) => String(e.id)}
-      refreshControl={<RefreshControl refreshing={atualizando} tintColor={cores.dourado} onRefresh={async () => { setAtualizando(true); await carregar(); setAtualizando(false); }} />}
+      refreshControl={<RefreshControl refreshing={atualizando} tintColor={cores.dourado} onRefresh={atualizar} />}
       ListHeaderComponent={
         <View style={{ gap: 10 }}>
           <TextInput value={busca} onChangeText={setBusca} placeholder="Buscar por nome, bairro ou cidade" placeholderTextColor={cores.texto3}
