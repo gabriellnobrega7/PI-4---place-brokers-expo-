@@ -60,4 +60,4 @@ export function mensagemDoEmpreendimento(emp, link) {
     "",
     "Quando for um bom horário para conversarmos?",
   ].filter((l) => l !== null).join("\n");
-}
+}

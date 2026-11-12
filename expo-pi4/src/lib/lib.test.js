@@ -59,4 +59,4 @@ test("datas e agenda", () => {
   assert.deepEqual(s.hoje.map((x) => x.id), ["a"]);
   assert.deepEqual(s.proximos.map((x) => x.id), ["b"]);
   assert.deepEqual(s.historico.map((x) => x.id), ["d", "c"]);
-});
+});
