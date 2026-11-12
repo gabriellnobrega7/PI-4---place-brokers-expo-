@@ -11,6 +11,16 @@ test("preço: MCMV mostra parcela; os outros, valor total", () => {
   assert.equal(precoDoEmpreendimento({}).valor, "Sob consulta");
 });
 
+test("preço: pronto e usado mostram o preço cheio, mesmo no MCMV (entrada à vista)", () => {
+  const pronto = precoDoEmpreendimento({ segmento: "mcmv", status: "pronto", parcela_min: 899, preco_min: "276000.00" });
+  assert.equal(pronto.rotulo, "A partir de");
+  assert.equal(pronto.sufixo, "");
+  assert.equal(pronto.valor.replace(/\s/g, " "), "R$ 276.000");
+  assert.equal(precoDoEmpreendimento({ segmento: "mcmv", status: "usado", parcela_min: 399, preco_min: 180000 }).rotulo, "A partir de");
+  assert.equal(precoDoEmpreendimento({ segmento: "mcmv", status: "obras", parcela_min: 899, preco_min: 269900 }).rotulo, "Parcelas a partir de");
+  assert.equal(precoDoEmpreendimento({ segmento: "mcmv", status: "pronto", parcela_min: 899 }).sufixo, "/mês");
+});
+
 test("prazo e faixa", () => {
   assert.equal(prazoDoEmpreendimento({ status: "pronto" }), "Pronto para morar");
   assert.equal(prazoDoEmpreendimento({ previsao_entrega: "2029-12-01" }), "Entrega prevista: dez/2029");
@@ -49,4 +59,4 @@ test("datas e agenda", () => {
   assert.deepEqual(s.hoje.map((x) => x.id), ["a"]);
   assert.deepEqual(s.proximos.map((x) => x.id), ["b"]);
   assert.deepEqual(s.historico.map((x) => x.id), ["d", "c"]);
-});
+});

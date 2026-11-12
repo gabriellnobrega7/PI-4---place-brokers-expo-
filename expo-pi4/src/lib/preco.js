@@ -11,11 +11,19 @@ export const FASES = { lancamento: "Lançamento", obras: "Em obras", pronto: "Pr
 const numero = (v) => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 export const brl = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
+/** Prontos e usados: a entrada é à vista, então mostram o preço cheio, mesmo no MCMV. */
+export const ETAPAS_PRECO_CHEIO = ["pronto", "usado"];
+export const mostraPrecoCheio = (emp = {}) => ETAPAS_PRECO_CHEIO.includes(String(emp.status ?? "").toLowerCase());
+
 export function precoDoEmpreendimento(emp = {}) {
   const parcela = numero(emp.parcela_min);
-  if (emp.segmento === "mcmv" && parcela != null) return { rotulo: "Parcelas a partir de", valor: brl(parcela), sufixo: "/mês", temValor: true };
   const total = numero(emp.preco_min);
+  if (emp.segmento === "mcmv" && parcela != null && !mostraPrecoCheio(emp)) {
+    return { rotulo: "Parcelas a partir de", valor: brl(parcela), sufixo: "/mês", temValor: true };
+  }
   if (total != null) return { rotulo: "A partir de", valor: brl(total), sufixo: "", temValor: true };
+  // Pronto/usado sem preço cheio cadastrado: melhor a parcela do que "sob consulta".
+  if (emp.segmento === "mcmv" && parcela != null) return { rotulo: "Parcelas a partir de", valor: brl(parcela), sufixo: "/mês", temValor: true };
   return { rotulo: "Valores", valor: "Sob consulta", sufixo: "", temValor: false };
 }
 
@@ -52,4 +60,4 @@ export function mensagemDoEmpreendimento(emp, link) {
     "",
     "Quando for um bom horário para conversarmos?",
   ].filter((l) => l !== null).join("\n");
-}
+}
