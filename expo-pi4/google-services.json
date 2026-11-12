@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "185021943131",
+    "project_id": "place-brokers-f44b6",
+    "storage_bucket": "place-brokers-f44b6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185021943131:android:ee4c096d35471b0bd15e7e",
+        "android_client_info": {
+          "package_name": "com.arthurmssteam.expopi4"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFtTBtvT1sT-_xw68Su0OCU2Q0NTKDXyQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
