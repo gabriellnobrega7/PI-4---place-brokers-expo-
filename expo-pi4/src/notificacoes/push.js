@@ -6,6 +6,7 @@ import { Platform } from "react-native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import * as SecureStore from "expo-secure-store";
 import { cancelarAparelho, inscreverAparelho } from "../api/servicos";
 
 Notifications.setNotificationHandler({
@@ -13,6 +14,9 @@ Notifications.setNotificationHandler({
 });
 
 let tokenAtual = null;
+
+// Mesma chave que a PerfilTela grava quando o corretor desliga os avisos neste celular.
+const FLAG_DESLIGADO = "pb_push_desligado";
 
 async function prepararCanais() {
   if (Platform.OS !== "android") return;
@@ -35,9 +39,15 @@ async function permissao() {
   return pedido.granted;
 }
 
-/** Depois do login: pede permissão, pega o token do Expo e manda para a API. Nunca derruba o app. */
-export async function ativarAvisosDeLead() {
+/**
+ * Depois do login: pede permissão, pega o token do Expo e manda para a API. Nunca derruba o app.
+ * automatico: true (abertura do app) respeita quem desligou os avisos no Perfil.
+ */
+export async function ativarAvisosDeLead({ automatico = false } = {}) {
   try {
+    if (automatico && (await SecureStore.getItemAsync(FLAG_DESLIGADO).catch(() => null))) {
+      return { ativo: false, motivo: "desligado no perfil" };
+    }
     await prepararCanais();
     if (!Device.isDevice || !(await permissao())) return { ativo: false, motivo: "sem permissão" };
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;

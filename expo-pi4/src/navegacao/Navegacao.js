@@ -49,7 +49,7 @@ export default function Navegacao() {
 
   useEffect(() => {
     if (!sessao) return undefined;
-    ativarAvisosDeLead();
+    ativarAvisosDeLead({ automatico: true });
     return aoTocarNotificacao(() => { if (navegacaoRef.isReady()) navegacaoRef.navigate("Principal", { screen: "Leads" }); });
   }, [sessao?.user?.id]);
 
