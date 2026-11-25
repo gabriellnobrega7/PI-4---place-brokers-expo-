@@ -6,11 +6,11 @@ Entrega da disciplina **Dispositivos Móveis** (prazo 27/11/2026). É a área do
 
 | Nome | RA |
 | --- | --- |
-| Arthur Vinícius | _preencher_ |
-| Gabriel Soares | _preencher_ |
-| João Victor Varela dos Santos | _preencher_ |
-| Sérgio Bandeira da Cruz | _preencher_ |
-| Sofia Viana Perez | _preencher_ |
+| Arthur Vinícius | 00000859883 |
+| Gabriel Soares | 00000859526 |
+| João Victor Varela dos Santos | 00000859893 |
+| Sérgio Bandeira da Cruz | 00000857151 |
+| Sofia Viana Perez | 00000857166 |
 
 ## Requisitos da disciplina
 
