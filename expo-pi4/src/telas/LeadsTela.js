@@ -1,11 +1,13 @@
 // Meus leads (João): ligar, WhatsApp, copiar o número segurando, lembrete com alarme.
 // Regra da Place: quem retorna primeiro leva o cliente. Lead novo fica no topo com o tempo de espera.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "expo-router";
+import { useMeusLeads, useMinhaRoleta } from "../api/consultas";
 import { Alert, FlatList, Linking, Modal, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Botao, Campo, Carregando, Cartao, Chip, Erro, Selo, Vazio, s } from "../componentes/ui";
-import { meusLeads, minhaRoleta, mudarStatusLead, registrarAtividade } from "../api/servicos";
+import { mudarStatusLead, registrarAtividade } from "../api/servicos";
 import { formatarTelefone, linkLigar, linkWhatsApp, saudacao } from "../lib/telefone";
 import { dia, hora, tempoDesde } from "../lib/datas";
 import { assuntoDoContato, detalheDoPedido, tipoDoLead } from "../lib/leads";
@@ -72,6 +74,7 @@ function Lembrete({ lead, onFechar }) {
 }
 
 function CartaoLead({ lead, onAtualizar }) {
+  const router = useRouter();
   const [copiado, setCopiado] = useState(false);
   const [lembrete, setLembrete] = useState(false);
   const st = STATUS[lead.status] ?? STATUS.novo;
@@ -129,36 +132,26 @@ function CartaoLead({ lead, onAtualizar }) {
         <Botao titulo="Ligar" icone="call" onPress={() => contato("ligacao")} estilo={{ flex: 1 }} />
         <Botao titulo="WhatsApp" tipo="whatsapp" icone="logo-whatsapp" onPress={() => contato("whatsapp")} estilo={{ flex: 1 }} />
       </View>
-      <Botao titulo="Lembrar de retornar" tipo="contorno" icone="alarm-outline" onPress={() => setLembrete(true)} />
+      <View style={s.linha}>
+        <Botao titulo="Lembrete" tipo="contorno" icone="alarm-outline" onPress={() => setLembrete(true)} estilo={{ flex: 1 }} />
+        <Botao titulo="Histórico" tipo="contorno" icone="list-outline" onPress={() => router.push({ pathname: "/lead/[id]", params: { id: String(lead.id) } })} estilo={{ flex: 1 }} />
+      </View>
       {lembrete && <Lembrete lead={lead} onFechar={(salvou) => { setLembrete(false); if (salvou) Alert.alert("Lembrete salvo", "O celular vai tocar na hora marcada."); }} />}
     </Cartao>
   );
 }
 
 export default function LeadsTela() {
-  const [leads, setLeads] = useState(null);
-  const [roleta, setRoleta] = useState(null);
+  const router = useRouter();
+  // TanStack Query: recarrega sozinho a cada minuto (lead novo) e depois de qualquer mudança.
+  const consulta = useMeusLeads();
+  const consultaRoleta = useMinhaRoleta();
   const [filtro, setFiltro] = useState("ativos");
-  const [erro, setErro] = useState("");
   const [atualizando, setAtualizando] = useState(false);
-
-  const carregar = useCallback(async () => {
-    try {
-      setErro("");
-      const [l, r] = await Promise.all([meusLeads(), minhaRoleta().catch(() => null)]);
-      setLeads(l);
-      setRoleta(r);
-    } catch (e) {
-      setErro(e.message);
-      setLeads((x) => x ?? []);
-    }
-  }, []);
-
-  useEffect(() => {
-    carregar();
-    const t = setInterval(carregar, 60 * 1000); // confere lead novo a cada minuto com o app aberto
-    return () => clearInterval(t);
-  }, [carregar]);
+  const leads = consulta.data ?? (consulta.isError ? [] : null);
+  const roleta = consultaRoleta.data ?? null;
+  const erro = consulta.error?.message ?? "";
+  const carregar = async () => { await Promise.all([consulta.refetch(), consultaRoleta.refetch()]); };
 
   const lista = useMemo(() => {
     const base = (leads ?? []).filter((l) => (filtro === "ativos" ? ["novo", "em_atendimento"].includes(l.status) : l.status === filtro));
@@ -180,6 +173,7 @@ export default function LeadsTela() {
       refreshControl={<RefreshControl refreshing={atualizando} tintColor={cores.dourado} onRefresh={async () => { setAtualizando(true); await carregar(); setAtualizando(false); }} />}
       ListHeaderComponent={
         <View style={{ gap: 10 }}>
+          <Botao titulo="Cadastrar lead" icone="person-add-outline" onPress={() => router.push("/lead/novo")} />
           {roleta?.chegada && (
             <Cartao estilo={{ padding: 12 }}>
               <Text style={s.texto2}>

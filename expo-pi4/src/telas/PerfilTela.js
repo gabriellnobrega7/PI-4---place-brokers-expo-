@@ -1,6 +1,7 @@
 // Perfil e configurações (Sofia): nome, telefone, trocar senha, avisos e sair.
 import { useEffect, useRef, useState } from "react";
 import { Alert, Linking, ScrollView, Switch, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
@@ -120,6 +121,7 @@ function LinhaInterruptor({ titulo, descricao, valor, aoMudar, ocupado }) {
 
 export default function PerfilTela() {
   const { usuario, sair, atualizarUsuario } = useSessao();
+  const router = useRouter();
   const celular = useAvisosNoCelular();
 
   const [nome, setNome] = useState(usuario?.nome ?? "");
@@ -320,6 +322,8 @@ export default function PerfilTela() {
         <Retorno retorno={retornoAvisos} />
       </Cartao>
 
+      <Botao titulo="Minhas vendas" tipo="contorno" icone="cash-outline" onPress={() => router.push("/vendas")} />
+      <Botao titulo="Sobre o app" tipo="contorno" icone="information-circle-outline" onPress={() => router.push("/sobre")} />
       <Botao titulo="Abrir o site da Place" tipo="contorno" icone="globe-outline" onPress={abrirSite} />
       <Botao titulo="Sair" tipo="perigo" icone="log-out-outline" onPress={confirmarSaida} />
     </ScrollView>

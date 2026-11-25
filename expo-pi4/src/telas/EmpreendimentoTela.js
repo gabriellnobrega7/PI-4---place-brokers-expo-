@@ -1,5 +1,7 @@
 // Detalhe do empreendimento (Gabriel): fotos, valores, book/tabela e envio ao cliente.
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocalSearchParams, useNavigation } from "expo-router";
+import { chaves, queryClient } from "../api/consultas";
 import { ActivityIndicator, Dimensions, FlatList, Image, Linking, ScrollView, Share, Text, View } from "react-native";
 import { Botao, Cartao, Erro, Selo, s } from "../componentes/ui";
 import { buscarEmpreendimento, listarDocumentos, urlDoDocumento } from "../api/servicos";
@@ -9,8 +11,11 @@ import { cores } from "../tema";
 
 const LARGURA = Dimensions.get("window").width;
 
-export default function EmpreendimentoTela({ route, navigation }) {
-  const { id, resumo } = route.params;
+export default function EmpreendimentoTela() {
+  const navigation = useNavigation();
+  const { id, nome } = useLocalSearchParams();
+  // O resumo já veio na lista do catálogo (cache do TanStack Query): a tela abre na hora.
+  const resumo = useMemo(() => (queryClient.getQueryData(chaves.empreendimentos) ?? []).find((e) => String(e.id) === String(id)) ?? (nome ? { id, nome } : null), [id, nome]);
   const [emp, setEmp] = useState(resumo ?? { id });
   const [docs, setDocs] = useState(null);
   const [erroDocs, setErroDocs] = useState("");

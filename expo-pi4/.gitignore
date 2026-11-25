@@ -36,3 +36,6 @@ yarn-error.*
 
 # TypeScript
 *.tsbuildinfo
+
+# Chave privada do Firebase Admin (conta de serviço): nunca no git
+*firebase-adminsdk*.json

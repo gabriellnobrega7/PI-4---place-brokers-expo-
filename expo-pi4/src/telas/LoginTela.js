@@ -1,18 +1,17 @@
 // Login (Gabriel). Mesmo login do site; "Esqueci minha senha" manda o link por e-mail.
-// "Cadastre-se" abre o cadastro do site no navegador: a conta fica pendente até o administrador aprovar.
+// "Cadastre-se" abre a tela de cadastro do app (POST /auth/register): a conta fica pendente até o administrador aprovar.
 import { useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Botao, Campo, Erro, s } from "../componentes/ui";
 import { useSessao } from "../contexto";
 import { esqueciSenha } from "../api/servicos";
-import { SITE_URL } from "../config";
 import { ALVO, cores } from "../tema";
 
-const CADASTRO_URL = `${SITE_URL}/register`;
-
 export default function LoginTela() {
-  const { login } = useSessao();
+  const login = useSessao((estado) => estado.login);
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
@@ -44,9 +43,8 @@ export default function LoginTela() {
     }
   }
 
-  async function cadastrar() {
-    try { await Linking.openURL(CADASTRO_URL); }
-    catch { Alert.alert("Não deu para abrir", `Acesse ${CADASTRO_URL} no navegador.`); }
+  function cadastrar() {
+    router.push("/cadastro");
   }
 
   return (
@@ -67,7 +65,7 @@ export default function LoginTela() {
           <Pressable
             accessibilityRole="link"
             accessibilityLabel="Cadastre-se"
-            accessibilityHint="Abre o cadastro no site"
+            accessibilityHint="Abre a tela de cadastro"
             onPress={cadastrar}
             style={({ pressed }) => ({ minHeight: ALVO, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.7 : 1 })}
           >
@@ -75,7 +73,7 @@ export default function LoginTela() {
               Ainda não tem conta? <Text style={{ color: cores.dourado, fontWeight: "700" }}>Cadastre-se</Text>
             </Text>
           </Pressable>
-          <Text style={[s.texto3, { textAlign: "center" }]}>O cadastro é feito no site e fica pendente até o administrador aprovar.</Text>
+          <Text style={[s.texto3, { textAlign: "center" }]}>A conta nova fica pendente até o administrador aprovar.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -1,61 +1,82 @@
 # Place Brokers — App do corretor (React Native + Expo)
 
-Entrega da disciplina **Dispositivos Móveis** (30/11/2026). É a área do corretor no celular: os leads que chegam pela roleta, a agenda de visitas e o catálogo. Usa a **mesma API do site** (`https://placebrokers-api.onrender.com`). As rotas estão no Swagger (`/docs`) e na coleção do Postman do back.
+Entrega da disciplina **Dispositivos Móveis** (prazo 27/11/2026). É a área do corretor no celular: os leads que chegam pela roleta, a carteira de clientes, a agenda de visitas, as vendas e o catálogo. Usa o **back-end Express da disciplina AOS** (o mesmo do site), com as rotas no Swagger (`/docs`) e na coleção do Postman do back.
 
-## Telas e quem cuida de cada parte
+## Equipe
 
-| Parte | Quem | Arquivos |
+| Nome | RA |
+| --- | --- |
+| Arthur Vinícius | _preencher_ |
+| Gabriel Soares | _preencher_ |
+| João Victor Varela dos Santos | _preencher_ |
+| Sérgio Bandeira da Cruz | _preencher_ |
+| Sofia Viana Perez | _preencher_ |
+
+## Requisitos da disciplina
+
+| Requisito | Onde está |
+| --- | --- |
+| Expo Router | pasta `app/` (rotas por arquivo, abas em `app/(abas)/`, telas protegidas por login com `Stack.Protected`) |
+| Estado global | Zustand em `src/estado/sessao.js` (usuário logado, entrar, cadastrar, sair) |
+| Telas Home e Sobre | `src/telas/HomeTela.js` (Início) e `src/telas/SobreTela.js` |
+| 1 tela por integrante | tabela abaixo |
+| Interação | botões, campos de texto, chips de seleção, chave liga/desliga, seletor de data e hora, busca |
+| Axios + TanStack Query | `src/api/cliente.js` (Axios, token e renovação automática) e `src/api/consultas.js` (consultas e mutações) |
+| CRUD de 4 entidades | **Clientes**, **Agendamentos**, **Leads** e **Vendas**: listar, ver, criar, alterar e excluir |
+| 2 relacionamentos | **Lead → atividades** (`/leads/:id/atividades`, tela do lead) e **Cliente → agendamentos** (`/clientes/:id/agendamentos`, tela do cliente) |
+| Login, logout e sign up | `LoginTela`, `CadastroTela` (`POST /auth/register`) e Sair no Perfil (`POST /auth/logout`) |
+| UI Kit | React Native Paper (tema com as cores da Place em `src/tema.js`; componentes em `src/componentes/ui.js`) |
+
+## Telas e quem fez cada parte
+
+| Integrante | Telas | Arquivos |
 | --- | --- | --- |
-| Estrutura, navegação, login, catálogo e detalhe do empreendimento (com envio pelo WhatsApp) | Gabriel | `App.js`, `src/navegacao/`, `src/contexto.js`, `src/api/cliente.js`, `src/api/sessao.js`, `src/telas/LoginTela.js`, `src/telas/CatalogoTela.js`, `src/telas/EmpreendimentoTela.js` |
-| Meus leads: ligar, WhatsApp, copiar o número segurando, lembrete com alarme; aviso de lead novo | João | `src/telas/LeadsTela.js`, `src/notificacoes/push.js`, `src/lib/telefone.js` |
-| Agenda: listar, agendar, remarcar, confirmar, realizado, não compareceu, cancelar | Sérgio | `src/telas/AgendaTela.js`, `src/telas/NovoAgendamentoTela.js`, `src/lib/datas.js` |
-| Perfil e configurações (dados, trocar senha, avisos, sair); revisão de usabilidade no celular | Sofia | `src/telas/PerfilTela.js`, `src/componentes/ui.js`, `src/tema.js` |
-| Build e APK (EAS) | Arthur | `eas.json`, `app.json` |
-
-Cada um sobe os commits da própria parte (regra do grupo no Trello).
+| Gabriel | Início, Login, Cadastro, Catálogo, Empreendimento; base do app e navegação | `app/_layout.js`, `app/(abas)/_layout.js`, `src/telas/HomeTela.js`, `LoginTela.js`, `CadastroTela.js`, `CatalogoTela.js`, `EmpreendimentoTela.js`, `src/estado/sessao.js` |
+| João | Meus leads, Lead (histórico de atendimento = atividades), Cadastrar/editar lead; aviso de lead novo | `src/telas/LeadsTela.js`, `LeadDetalheTela.js`, `LeadFormTela.js`, `src/notificacoes/push.js` |
+| Sérgio | Agenda, Novo agendamento (remarcar, confirmar, realizado, cancelar) | `src/telas/AgendaTela.js`, `NovoAgendamentoTela.js`, `src/lib/datas.js` |
+| Sofia | Perfil, Vendas, Sobre; componentes e tema (Paper) | `src/telas/PerfilTela.js`, `VendasTela.js`, `SobreTela.js`, `src/componentes/`, `src/tema.js` |
+| Arthur | Clientes, Cliente (com os agendamentos do cliente), Cadastrar/editar cliente; EAS e publicação | `src/telas/ClientesTela.js`, `ClienteDetalheTela.js`, `ClienteFormTela.js`, `eas.json`, `app.json` |
 
 ## Como rodar
 
-Precisa do Node 20+ e do app **Expo Go** no celular. No Android, o Expo Go do SDK 56 se instala pelo próprio Expo CLI: aperte `a` com o celular ligado no USB ou no emulador.
+Precisa do Node 22+ e do app **Expo Go** (SDK 58) no celular. No Android, o Expo Go certo se instala pelo próprio Expo CLI: aperte `a` com o celular ligado no USB.
 
-```bash
+```powershell
+cd expo-pi4
 npm install
-npx expo install react react-native expo-status-bar expo-secure-store expo-notifications expo-device expo-constants expo-clipboard @expo/vector-icons @react-navigation/native @react-navigation/native-stack @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context @react-native-community/datetimepicker
-cp .env.example .env      # no Windows: copy .env.example .env
 npx expo start            # leia o QR code com o Expo Go
-npm test                  # regras de preço, telefone e agenda
+npm test                  # regras de preço, telefone, agenda e leads
 ```
 
-O `npx expo install` escolhe as versões compatíveis com o SDK. Rode-o só na primeira vez; depois, `npm install` basta.
+Para usar o back rodando no seu PC, crie um `.env` com o IP do PC na rede (`EXPO_PUBLIC_API_URL=http://192.168.0.10:3333`). No celular, `localhost` é o próprio celular.
 
-Para usar o back rodando no seu PC, coloque no `.env` o IP do PC na rede (`EXPO_PUBLIC_API_URL=http://192.168.0.10:3333`). No celular, `localhost` é o próprio celular.
+## Publicar no Expo (QR code do Expo Go)
+
+Owner: organização `arthurmss-team` (a mesma em que o professor foi convidado).
+
+```powershell
+cd expo-pi4
+npx eas-cli login
+npx eas-cli update:configure     # só na primeira vez (grava runtimeVersion e updates.url)
+npx eas-cli update --branch main --message "Entrega Dispositivos Móveis"
+```
+
+O link da atualização (com o QR code para abrir no Expo Go) aparece no terminal e em expo.dev → arthurmss-team → expo-pi4 → Updates.
 
 ## Login e sessão
 
 - Mesmo login do site. O app aceita só corretor: gerente e admin usam o site.
 - O token fica no cofre do celular (`expo-secure-store`), não em texto puro.
-- O token vale 1 hora. Quando vence, o app troca sozinho pelo `refreshToken` em `POST /auth/renovar` e o corretor não precisa digitar a senha de novo. Se a conta for desativada, a renovação falha e o app volta para o login.
+- O token vale 1 hora. Quando vence, o Axios troca sozinho pelo `refreshToken` em `POST /auth/renovar`. Se não der, o app volta para o login.
+- Sair chama `POST /auth/logout`, que encerra a sessão no servidor.
 
 ## Avisos no celular
 
-- **Lead novo**: depois do login, o app pede permissão, pega o token do Expo e manda para `POST /notificacoes/inscricao` (`{ expoToken }`). O back avisa assim que a roleta entrega um lead. O push remoto **não funciona no Expo Go do Android**; teste com o APK (`npm run apk`) ou com um development build.
-- **Lembrete de retorno**: em "Lembrar de retornar", o app grava o retorno no lead (aparece no site) e agenda um alarme no próprio celular. Esse funciona no Expo Go.
-- Tocar no aviso abre a aba Meus leads.
-
-## Gerar o APK (Arthur)
-
-```bash
-npm install -g eas-cli
-eas login
-eas init                  # cria o projeto no Expo e grava o projectId no app.json (necessário para o push)
-npm run apk               # eas build --platform android --profile preview
-```
-
-O link do APK sai no terminal e no painel do Expo. As URLs da API e do site de cada build estão no `eas.json`.
+- **Lead novo**: depois do login, o app pede permissão e registra o aparelho em `POST /notificacoes/inscricao`. O push remoto **não funciona no Expo Go do Android**; teste com o APK (`npm run apk`).
+- **Lembrete de retorno**: grava o retorno no lead (aparece no site) e agenda um alarme no próprio celular.
 
 ## Regras que o app segue (iguais às do site)
 
-- Lead novo aparece no topo, com o tempo de espera, porque quem retorna primeiro leva o cliente. Ligar ou chamar no WhatsApp registra o contato e passa o lead para "em atendimento"; o gerente vê o tempo de resposta.
-- O WhatsApp abre com "Bom dia/Boa tarde/Boa noite, Nome!".
-- Ao mandar um empreendimento para o cliente vai só o link público (fotos, valores e mapa). Book e tabela ficam para a reunião.
+- Lead novo aparece no topo, com o tempo de espera. Ligar ou chamar no WhatsApp registra o contato e passa o lead para "em atendimento".
+- Corretor só vê e altera o que é da própria carteira. Só exclui lead que ele mesmo cadastrou; cliente com venda, visita já realizada e venda confirmada não são excluídos.
 - Botões com pelo menos 48 px, abas embaixo para alcançar com o polegar, tema escuro com o dourado da marca.

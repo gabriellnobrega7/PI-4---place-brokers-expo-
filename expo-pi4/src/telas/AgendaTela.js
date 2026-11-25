@@ -1,9 +1,11 @@
 // Agenda (Sérgio): visitas e reuniões do corretor — listar, agendar, remarcar e mudar status.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useAgendamentos } from "../api/consultas";
 import { Alert, FlatList, Linking, Platform, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Botao, Campo, Carregando, Cartao, Chip, Erro, Selo, Vazio, s } from "../componentes/ui";
-import { listarAgendamentos, mudarStatusAgendamento, remarcar } from "../api/servicos";
+import { excluirAgendamento, mudarStatusAgendamento, remarcar } from "../api/servicos";
 import { chaveDia, combinarDataHora, dataFutura, dia, hora, podeFinalizar, separarAgenda, statusEncerrado } from "../lib/datas";
 import { linkLigar, linkWhatsApp, saudacao } from "../lib/telefone";
 import { cores } from "../tema";
@@ -149,6 +151,13 @@ function ItemAgenda({ ag, onMudou }) {
               )}
             </>
           )}
+          {ag.status !== "realizado" && (
+            <Botao titulo="Excluir agendamento" tipo="perigo" icone="trash-outline" desativado={ocupado}
+              onPress={() => Alert.alert("Excluir agendamento?", "Ele sai da agenda (e da agenda do site).", [
+                { text: "Voltar", style: "cancel" },
+                { text: "Excluir", style: "destructive", onPress: () => acao(() => excluirAgendamento(ag.id)) },
+              ])} />
+          )}
           <Erro texto={erro} />
         </View>
       )}
@@ -156,24 +165,17 @@ function ItemAgenda({ ag, onMudou }) {
   );
 }
 
-export default function AgendaTela({ navigation }) {
-  const [lista, setLista] = useState(null);
+export default function AgendaTela() {
+  const router = useRouter();
+  const consulta = useAgendamentos();
   const [aba, setAba] = useState("hoje");
-  const [erro, setErro] = useState("");
   const [atualizando, setAtualizando] = useState(false);
+  const lista = consulta.data ?? (consulta.isError ? [] : null);
+  const erro = consulta.error?.message ?? "";
+  const carregar = useCallback(async () => { await consulta.refetch(); }, [consulta]);
 
-  const carregar = useCallback(async () => {
-    try {
-      setErro("");
-      const dados = await listarAgendamentos();
-      setLista(Array.isArray(dados) ? dados : []);
-    } catch (e) {
-      setErro(e?.message ?? "Não foi possível carregar a agenda.");
-      setLista((anterior) => anterior ?? []);
-    }
-  }, []);
-
-  useEffect(() => navigation.addListener("focus", carregar), [navigation, carregar]);
+  // Recarrega ao voltar para a aba (ex.: depois de criar um agendamento).
+  useFocusEffect(useCallback(() => { consulta.refetch(); }, [consulta.refetch]));
 
   const grupos = useMemo(() => separarAgenda(lista ?? []), [lista]);
   if (lista === null) return <Carregando />;
@@ -188,7 +190,7 @@ export default function AgendaTela({ navigation }) {
       refreshControl={<RefreshControl refreshing={atualizando} tintColor={cores.dourado} onRefresh={async () => { setAtualizando(true); await carregar(); setAtualizando(false); }} />}
       ListHeaderComponent={
         <View style={{ gap: 10 }}>
-          <Botao titulo="Novo agendamento" icone="add" onPress={() => navigation.navigate("NovoAgendamento")} />
+          <Botao titulo="Novo agendamento" icone="add" onPress={() => router.push("/novo-agendamento")} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             <Chip texto={`Hoje (${grupos.hoje.length})`} ativo={aba === "hoje"} onPress={() => setAba("hoje")} />
             <Chip texto={`Próximos (${grupos.proximos.length})`} ativo={aba === "proximos"} onPress={() => setAba("proximos")} />

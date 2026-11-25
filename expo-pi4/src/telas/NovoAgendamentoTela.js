@@ -1,17 +1,22 @@
 // Novo agendamento (Sérgio): cliente da carteira, visita ou reunião, data e hora.
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "expo-router";
+import { useClientes, useCriarAgendamento, useEmpreendimentos } from "../api/consultas";
 import { ActivityIndicator, Platform, ScrollView, Text, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Botao, Campo, Chip, Erro, s } from "../componentes/ui";
-import { criarAgendamento, listarClientes, listarEmpreendimentos } from "../api/servicos";
 import { combinarDataHora, dataFutura, dia, hora } from "../lib/datas";
 import { cores } from "../tema";
 
 const sem = (t = "") => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-export default function NovoAgendamentoTela({ navigation }) {
-  const [clientes, setClientes] = useState([]);
-  const [empreendimentos, setEmpreendimentos] = useState([]);
+export default function NovoAgendamentoTela() {
+  const router = useRouter();
+  const consultaClientes = useClientes();
+  const consultaEmp = useEmpreendimentos();
+  const criacao = useCriarAgendamento();
+  const clientes = consultaClientes.data ?? [];
+  const empreendimentos = consultaEmp.data ?? [];
   const [tipo, setTipo] = useState("visita_imovel");
   const [cliente, setCliente] = useState(null);
   const [emp, setEmp] = useState(null);
@@ -23,25 +28,10 @@ export default function NovoAgendamentoTela({ navigation }) {
   const [obs, setObs] = useState("");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [carregandoClientes, setCarregandoClientes] = useState(true);
-  const [carregandoEmp, setCarregandoEmp] = useState(true);
-  const [erroClientes, setErroClientes] = useState("");
-  const [erroEmp, setErroEmp] = useState("");
-
-  useEffect(() => {
-    let ativo = true;
-    listarClientes()
-      .then((dados) => { if (ativo) setClientes(Array.isArray(dados) ? dados : []); })
-      .catch((e) => { if (ativo) setErroClientes(e?.message ?? "Não foi possível carregar clientes."); })
-      .finally(() => { if (ativo) setCarregandoClientes(false); });
-    listarEmpreendimentos()
-      .then((dados) => {
-        if (ativo) setEmpreendimentos(Array.isArray(dados) ? dados : Array.isArray(dados?.empreendimentos) ? dados.empreendimentos : []);
-      })
-      .catch((e) => { if (ativo) setErroEmp(e?.message ?? "Não foi possível carregar empreendimentos."); })
-      .finally(() => { if (ativo) setCarregandoEmp(false); });
-    return () => { ativo = false; };
-  }, []);
+  const carregandoClientes = consultaClientes.isLoading;
+  const carregandoEmp = consultaEmp.isLoading;
+  const erroClientes = consultaClientes.error?.message ?? "";
+  const erroEmp = consultaEmp.error?.message ?? "";
 
   const clientesFiltrados = useMemo(() => clientes.filter((c) => !buscaCliente || sem(c.nome).includes(sem(buscaCliente))).slice(0, 6), [clientes, buscaCliente]);
   const empsFiltrados = useMemo(() => empreendimentos.filter((e) => !buscaEmp || sem(`${e.nome} ${e.bairro ?? ""}`).includes(sem(buscaEmp))).slice(0, 6), [empreendimentos, buscaEmp]);
@@ -54,13 +44,13 @@ export default function NovoAgendamentoTela({ navigation }) {
     setSalvando(true);
     setErro("");
     try {
-      await criarAgendamento({
+      await criacao.mutateAsync({
         tipo, clienteId: cliente.id, dataHora: quando.toISOString(),
         empreendimentoId: tipo === "visita_imovel" ? emp.id : undefined,
         local: tipo === "visita_imovel" ? undefined : local.trim() || undefined,
         observacoes: obs.trim() || undefined,
       });
-      navigation.goBack();
+      router.back();
     } catch (e) {
       setErro(e.message);
     } finally {

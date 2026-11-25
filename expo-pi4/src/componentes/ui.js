@@ -1,32 +1,41 @@
-// Peças visuais reaproveitadas pelas telas (mesma cara do site: fundo azul-escuro e dourado).
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+// Peças visuais reaproveitadas pelas telas (Sofia), montadas sobre o UI Kit React Native Paper.
+// Mantém os mesmos nomes de antes (Botao, Campo, Cartao...) para as telas não mudarem.
+import { StyleSheet, View } from "react-native";
+import { ActivityIndicator, Button, Card, Chip as ChipPaper, HelperText, Text, TextInput } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { ALVO, cores, raio } from "../tema";
 
+export const iconeIonicons = (nome) => (nome ? ({ size, color }) => <Ionicons name={nome} size={size} color={color} /> : undefined);
+
 export function Botao({ titulo, onPress, tipo = "principal", icone, desativado, carregando, estilo }) {
-  const fundo = { principal: cores.dourado, whatsapp: cores.whatsapp, perigo: "transparent", contorno: "transparent" }[tipo];
-  const borda = { perigo: cores.perigo, contorno: cores.linha }[tipo] ?? fundo;
+  const modo = tipo === "principal" || tipo === "whatsapp" ? "contained" : "outlined";
+  const cor = { principal: cores.dourado, whatsapp: cores.whatsapp }[tipo];
   const corTexto = { principal: "#1a1408", whatsapp: "#06210f", perigo: cores.perigo, contorno: cores.texto }[tipo];
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={titulo}
+    <Button
+      mode={modo}
       onPress={onPress}
       disabled={desativado || carregando}
-      style={({ pressed }) => [s.botao, { backgroundColor: fundo, borderColor: borda, opacity: desativado ? 0.5 : pressed ? 0.85 : 1 }, estilo]}
+      loading={carregando}
+      icon={iconeIonicons(icone)}
+      buttonColor={cor}
+      textColor={corTexto}
+      accessibilityLabel={titulo}
+      style={[{ borderRadius: raio.medio, borderColor: tipo === "perigo" ? cores.perigo : cores.linha }, estilo]}
+      contentStyle={{ minHeight: ALVO }}
+      labelStyle={{ fontSize: 15, fontWeight: "700" }}
     >
-      {carregando ? <ActivityIndicator color={corTexto} /> : (
-        <>
-          {icone && <Ionicons name={icone} size={18} color={corTexto} />}
-          <Text style={[s.botaoTexto, { color: corTexto }]}>{titulo}</Text>
-        </>
-      )}
-    </Pressable>
+      {titulo}
+    </Button>
   );
 }
 
 export function Cartao({ children, estilo }) {
-  return <View style={[s.cartao, estilo]}>{children}</View>;
+  return (
+    <Card mode="outlined" style={[s.cartaoPaper, estilo?.borderColor ? { borderColor: estilo.borderColor } : null]}>
+      <Card.Content style={[{ gap: 10 }, estilo]}>{children}</Card.Content>
+    </Card>
+  );
 }
 
 export function Selo({ texto, cor = cores.texto3 }) {
@@ -37,22 +46,38 @@ export function Selo({ texto, cor = cores.texto3 }) {
   );
 }
 
-export function Campo({ rotulo, erro, ...props }) {
+export function Campo({ rotulo, erro, style, ...props }) {
   return (
-    <View style={{ gap: 6 }}>
-      {rotulo ? <Text style={s.rotulo}>{rotulo}</Text> : null}
-      <TextInput placeholderTextColor={cores.texto3} style={[s.campo, erro && { borderColor: cores.perigo }]} {...props} />
-      {erro ? <Text style={s.erro}>{erro}</Text> : null}
+    <View>
+      <TextInput
+        mode="outlined"
+        label={rotulo}
+        error={Boolean(erro)}
+        outlineColor={cores.linha}
+        activeOutlineColor={cores.dourado}
+        textColor={cores.texto}
+        placeholderTextColor={cores.texto3}
+        style={[{ backgroundColor: cores.cartao2 }, style]}
+        {...props}
+      />
+      {erro ? <HelperText type="error" visible>{erro}</HelperText> : null}
     </View>
   );
 }
 
 export function Chip({ texto, ativo, onPress }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: ativo }}
-      style={[s.chip, ativo && { borderColor: cores.dourado, backgroundColor: "rgba(233,173,90,0.15)" }]}>
-      <Text style={{ color: ativo ? cores.dourado : cores.texto2, fontSize: 14 }}>{texto}</Text>
-    </Pressable>
+    <ChipPaper
+      mode="outlined"
+      selected={Boolean(ativo)}
+      showSelectedCheck={false}
+      onPress={onPress}
+      style={[{ borderColor: ativo ? cores.dourado : cores.linha, backgroundColor: ativo ? "rgba(233,173,90,0.15)" : "transparent" }]}
+      textStyle={{ color: ativo ? cores.dourado : cores.texto2, fontSize: 14 }}
+      accessibilityState={{ selected: Boolean(ativo) }}
+    >
+      {texto}
+    </ChipPaper>
   );
 }
 
@@ -67,10 +92,10 @@ export function Vazio({ titulo, texto, icone = "file-tray-outline" }) {
 }
 
 export const Carregando = () => (
-  <View style={[s.vazio, { flex: 1 }]}><ActivityIndicator color={cores.dourado} size="large" /></View>
+  <View style={[s.vazio, { flex: 1, backgroundColor: cores.pagina }]}><ActivityIndicator color={cores.dourado} size="large" /></View>
 );
 
-export const Erro = ({ texto }) => (texto ? <Text style={[s.erro, { fontSize: 14 }]} accessibilityRole="alert">{texto}</Text> : null);
+export const Erro = ({ texto }) => (texto ? <HelperText type="error" visible style={{ fontSize: 14, paddingHorizontal: 0 }} accessibilityRole="alert">{texto}</HelperText> : null);
 
 export const s = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.pagina },
@@ -85,6 +110,7 @@ export const s = StyleSheet.create({
   botao: { minHeight: ALVO, borderRadius: raio.medio, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   botaoTexto: { fontSize: 15, fontWeight: "700" },
   cartao: { backgroundColor: cores.cartao, borderColor: cores.linha, borderWidth: 1, borderRadius: raio.grande, padding: 16, gap: 10 },
+  cartaoPaper: { backgroundColor: cores.cartao, borderColor: cores.linha, borderRadius: raio.grande },
   selo: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start" },
   seloTexto: { fontSize: 12, fontWeight: "600" },
   campo: { minHeight: ALVO, borderRadius: raio.medio, borderWidth: 1, borderColor: cores.linha, backgroundColor: cores.cartao2, color: cores.texto, paddingHorizontal: 14, fontSize: 16 },

@@ -1,8 +1,9 @@
 // Catálogo de empreendimentos (Gabriel): busca, segmento e "só disponíveis".
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "expo-router";
 import { FlatList, Image, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { Botao, Carregando, Chip, Erro, Selo, Vazio, s } from "../componentes/ui";
-import { listarEmpreendimentos } from "../api/servicos";
+import { useEmpreendimentos } from "../api/consultas";
 import { FASES, SEGMENTOS, faixa, prazoDoEmpreendimento, precoDoEmpreendimento } from "../lib/preco";
 import { cores, raio } from "../tema";
 
@@ -35,36 +36,19 @@ function Item({ e, onPress }) {
   );
 }
 
-export default function CatalogoTela({ navigation }) {
-  const [lista, setLista] = useState(null);
-  const [erro, setErro] = useState("");
-  const [atualizando, setAtualizando] = useState(false);
+export default function CatalogoTela() {
+  const router = useRouter();
+  const consulta = useEmpreendimentos();
+  // Não transforme uma falha da API em um catálogo vazio: se já havia dados, eles continuam visíveis.
+  const lista = consulta.data ?? null;
+  const erro = consulta.error?.message ?? "";
+  const carregar = () => consulta.refetch();
+  const atualizando = consulta.isRefetching;
   const [busca, setBusca] = useState("");
   const [segmento, setSegmento] = useState("");
   const [soDisponiveis, setSoDisponiveis] = useState(true);
 
-  const carregar = useCallback(async () => {
-    try {
-      setErro("");
-      const dados = await listarEmpreendimentos();
-      setLista(Array.isArray(dados) ? dados : dados?.empreendimentos ?? []);
-    } catch (e) {
-      // Não transforme uma falha da API em um catálogo vazio.
-      // Se já havia dados carregados, mantenha-os visíveis.
-      setErro(e.message || "Não foi possível carregar os empreendimentos.");
-    }
-  }, []);
-
-  useEffect(() => { carregar(); }, [carregar]);
-
-  async function atualizar() {
-    setAtualizando(true);
-    try {
-      await carregar();
-    } finally {
-      setAtualizando(false);
-    }
-  }
+  const atualizar = carregar;
 
   const filtrados = useMemo(() => {
     const q = sem(busca.trim());
@@ -107,7 +91,7 @@ export default function CatalogoTela({ navigation }) {
         </View>
       }
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-      renderItem={({ item }) => <Item e={item} onPress={() => navigation.navigate("Empreendimento", { id: item.id, resumo: item })} />}
+      renderItem={({ item }) => <Item e={item} onPress={() => router.push({ pathname: "/empreendimento/[id]", params: { id: String(item.id), nome: item.nome } })} />}
       ListEmptyComponent={<Vazio titulo="Nenhum empreendimento encontrado" texto="Tente outro nome ou tire os filtros." icone="search-outline" />}
     />
   );
