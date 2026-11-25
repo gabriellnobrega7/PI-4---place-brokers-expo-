@@ -49,6 +49,13 @@
       }
     },
     "owner": "arthurmss-team",
-    "backgroundColor": "#08152b"
+    "backgroundColor": "#08152b",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5f42591d-634e-4e46-bb8a-439091cdf104"
+    },
+    "ios": {}
   }
 }
