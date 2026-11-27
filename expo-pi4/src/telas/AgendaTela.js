@@ -1,11 +1,10 @@
 // Agenda (Sérgio): visitas e reuniões do corretor — listar, agendar, remarcar e mudar status.
 import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useAgendamentos } from "../api/consultas";
+import { useAgendamentos, useExcluirAgendamento, useMudarStatusAgendamento, useRemarcar } from "../api/consultas";
 import { Alert, FlatList, Linking, Platform, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Botao, Campo, Carregando, Cartao, Chip, Erro, Selo, Vazio, s } from "../componentes/ui";
-import { excluirAgendamento, mudarStatusAgendamento, remarcar } from "../api/servicos";
 import { chaveDia, combinarDataHora, dataFutura, dia, hora, podeFinalizar, separarAgenda, statusEncerrado } from "../lib/datas";
 import { linkLigar, linkWhatsApp, saudacao } from "../lib/telefone";
 import { cores } from "../tema";
@@ -19,6 +18,10 @@ const STATUS = {
 };
 
 function ItemAgenda({ ag, onMudou }) {
+  // Mudanças pelo TanStack Query: ao dar certo, as listas de agendamentos e clientes são recarregadas.
+  const mudarStatus = useMudarStatusAgendamento();
+  const remarcarAg = useRemarcar();
+  const excluirAg = useExcluirAgendamento();
   const [aberto, setAberto] = useState(false);
   const [remarcando, setRemarcando] = useState(false);
   const [modo, setModo] = useState(null);
@@ -52,7 +55,7 @@ function ItemAgenda({ ag, onMudou }) {
   function confirmarStatus(status, titulo, mensagem) {
     Alert.alert(titulo, mensagem, [
       { text: "Voltar", style: "cancel" },
-      { text: "Confirmar", onPress: () => acao(() => mudarStatusAgendamento(ag.id, status)) },
+      { text: "Confirmar", onPress: () => acao(() => mudarStatus.mutateAsync({ id: ag.id, status })) },
     ]);
   }
 
@@ -95,7 +98,7 @@ function ItemAgenda({ ag, onMudou }) {
           {!encerrado && (
             <>
               <View style={[s.linha, { flexWrap: "wrap" }]}>
-                {ag.status === "agendado" && <Botao titulo="Confirmar" tipo="contorno" desativado={ocupado} onPress={() => acao(() => mudarStatusAgendamento(ag.id, "confirmado"))} />}
+                {ag.status === "agendado" && <Botao titulo="Confirmar" tipo="contorno" desativado={ocupado} onPress={() => acao(() => mudarStatus.mutateAsync({ id: ag.id, status: "confirmado" }))} />}
                 {podeConcluir && (
                   <>
                     <Botao titulo="Realizado" tipo="contorno" desativado={ocupado} onPress={() => confirmarStatus("realizado", "Marcar como realizado?", "Confirma que a visita ou reunião aconteceu?")} />
@@ -136,7 +139,7 @@ function ItemAgenda({ ag, onMudou }) {
                       titulo="Salvar nova data" icone="checkmark" estilo={{ flex: 1 }}
                       desativado={ocupado || !dataFutura(novaData) || novaData.getTime() === new Date(ag.dataHora).getTime()}
                       carregando={ocupado}
-                      onPress={() => acao(() => remarcar(ag.id, novaData.toISOString()))}
+                      onPress={() => acao(() => remarcarAg.mutateAsync({ id: ag.id, dataHora: novaData.toISOString() }))}
                     />
                     <Botao titulo="Voltar" tipo="contorno" desativado={ocupado} onPress={() => { setRemarcando(false); setModo(null); }} />
                   </View>
@@ -146,7 +149,7 @@ function ItemAgenda({ ag, onMudou }) {
                 <View style={{ gap: 8 }}>
                   <Campo rotulo="Motivo do cancelamento" value={motivo} onChangeText={setMotivo} placeholder="Ex.: cliente pediu para remarcar no mês que vem" />
                   <Botao titulo="Confirmar cancelamento" tipo="perigo" desativado={!motivo.trim() || ocupado}
-                    onPress={() => acao(() => mudarStatusAgendamento(ag.id, "cancelado", { motivoCancelamento: motivo.trim() }))} />
+                    onPress={() => acao(() => mudarStatus.mutateAsync({ id: ag.id, status: "cancelado", extra: { motivoCancelamento: motivo.trim() } }))} />
                 </View>
               )}
             </>
@@ -155,7 +158,7 @@ function ItemAgenda({ ag, onMudou }) {
             <Botao titulo="Excluir agendamento" tipo="perigo" icone="trash-outline" desativado={ocupado}
               onPress={() => Alert.alert("Excluir agendamento?", "Ele sai da agenda (e da agenda do site).", [
                 { text: "Voltar", style: "cancel" },
-                { text: "Excluir", style: "destructive", onPress: () => acao(() => excluirAgendamento(ag.id)) },
+                { text: "Excluir", style: "destructive", onPress: () => acao(() => excluirAg.mutateAsync(ag.id)) },
               ])} />
           )}
           <Erro texto={erro} />
