@@ -14,15 +14,19 @@ import { cores, raio } from "../tema";
 
 function Indicador({ icone, numero, rotulo, cor = cores.dourado, onPress }) {
   return (
-    <Card mode="outlined" style={{ flex: 1, minWidth: 150, backgroundColor: cores.cartao, borderColor: cores.linha, borderRadius: raio.grande }}>
-      <TouchableRipple onPress={onPress} borderless style={{ borderRadius: raio.grande }} accessibilityRole="button" accessibilityLabel={`${numero} ${rotulo}`}>
-        <View style={{ padding: 16, gap: 6 }}>
-          <Ionicons name={icone} size={22} color={cor} />
-          <Text style={{ color: cores.texto, fontSize: 26, fontWeight: "700" }}>{numero}</Text>
-          <Text style={s.texto2}>{rotulo}</Text>
-        </View>
-      </TouchableRipple>
-    </Card>
+    // A largura fica numa View comum: no iOS o Card do Paper divide o estilo em duas camadas,
+    // e flex/minWidth no próprio Card faziam os cartões se sobreporem.
+    <View style={{ flexGrow: 1, flexBasis: "45%" }}>
+      <Card mode="outlined" style={{ backgroundColor: cores.cartao, borderColor: cores.linha, borderRadius: raio.grande }}>
+        <TouchableRipple onPress={onPress} borderless style={{ borderRadius: raio.grande }} accessibilityRole="button" accessibilityLabel={`${numero} ${rotulo}`}>
+          <View style={{ padding: 16, gap: 6 }}>
+            <Ionicons name={icone} size={22} color={cor} />
+            <Text style={{ color: cores.texto, fontSize: 26, fontWeight: "700" }}>{numero}</Text>
+            <Text style={s.texto2}>{rotulo}</Text>
+          </View>
+        </TouchableRipple>
+      </Card>
+    </View>
   );
 }
 
@@ -43,6 +47,8 @@ export default function HomeTela() {
   const novos = (leads.data ?? []).filter((l) => l.status === "novo").length;
   const atrasados = (retornos.data ?? []).filter((r) => r.atrasado).length;
   const primeiroNome = (usuario?.nome ?? "").split(" ")[0];
+  // Enquanto a API responde (o Render pode levar até 1 min para acordar), mostra "…" em vez de 0.
+  const valor = (consulta, numero) => (consulta.isPending ? "…" : numero);
 
   return (
     <ScrollView
@@ -55,10 +61,10 @@ export default function HomeTela() {
       <Erro texto={erro} />
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-        <Indicador icone="people" numero={novos} rotulo="leads esperando retorno" cor={novos ? cores.perigo : cores.dourado} onPress={() => router.push("/leads")} />
-        <Indicador icone="calendar" numero={hoje.length} rotulo="compromissos hoje" onPress={() => router.push("/agenda")} />
-        <Indicador icone="alarm" numero={(retornos.data ?? []).length} rotulo={atrasados ? `retornos (${atrasados} atrasado${atrasados > 1 ? "s" : ""})` : "retornos marcados"} onPress={() => router.push("/leads")} />
-        <Indicador icone="briefcase" numero={(clientes.data ?? []).length} rotulo="clientes na carteira" onPress={() => router.push("/clientes")} />
+        <Indicador icone="people" numero={valor(leads, novos)} rotulo="leads esperando retorno" cor={novos ? cores.perigo : cores.dourado} onPress={() => router.push("/leads")} />
+        <Indicador icone="calendar" numero={valor(agenda, hoje.length)} rotulo="compromissos hoje" onPress={() => router.push("/agenda")} />
+        <Indicador icone="alarm" numero={valor(retornos, (retornos.data ?? []).length)} rotulo={atrasados ? `retornos (${atrasados} atrasado${atrasados > 1 ? "s" : ""})` : "retornos marcados"} onPress={() => router.push("/leads")} />
+        <Indicador icone="briefcase" numero={valor(clientes, (clientes.data ?? []).length)} rotulo="clientes na carteira" onPress={() => router.push("/clientes")} />
       </View>
 
       <Card mode="outlined" style={{ backgroundColor: cores.cartao, borderColor: cores.linha, borderRadius: raio.grande }} onPress={() => router.push("/vendas")}>
