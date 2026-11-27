@@ -71,11 +71,12 @@ export default function LeadDetalheTela() {
   const excluirAtividade = useExcluirAtividade(id);
   const [formulario, setFormulario] = useState(null); // null | "novo" | atividade em edição
 
-  useEffect(() => { if (lead.data?.nome) navigation.setOptions({ title: lead.data.nome }); }, [lead.data?.nome, navigation]);
+  const nomeLead = lead.data?.nome;
+  useEffect(() => { if (nomeLead) navigation.setOptions({ title: nomeLead }); }, [nomeLead, navigation]);
 
   function trocarStatus() {
-    Alert.alert("Mudar status", lead.data.nome, [
-      ...["novo", "em_atendimento", "perdido"].filter((k) => k !== lead.data.status).map((k) => ({
+    Alert.alert("Mudar status", lead.data?.nome, [
+      ...["novo", "em_atendimento", "perdido"].filter((k) => k !== lead.data?.status).map((k) => ({
         text: STATUS[k][0],
         onPress: () => mudarStatus.mutateAsync({ id, status: k }).then(() => lead.refetch()).catch((e) => Alert.alert("Não deu", e.message)),
       })),
